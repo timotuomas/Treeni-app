@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Training">
+<meta name="theme-color" content="#07070f">
+<link rel="manifest" href="manifest.json">
+
+<title>Training</title>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#07070f;
+  color:#ddd;
+}
+.header{
+  padding:40px 20px 20px;
+  text-align:center;
+}
+h1{font-style:italic;}
+
+.card{
+  margin:10px;
+  padding:15px;
+  border:1px solid #222;
+  border-radius:12px;
+}
+.btn{
+  padding:6px 10px;
+  border:1px solid #444;
+  border-radius:8px;
+  margin-top:6px;
+}
+.done{color:#4ade80;}
+
+.streak{
+  text-align:center;
+  font-size:14px;
+  color:#a78bfa;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <h1>Training</h1>
+  <div class="streak" id="streak"></div>
+</div>
+
+<div id="app"></div>
+
+<script>
+
+/* ===== DATA ===== */
+const days = [
+ ["Chest","Core"],
+ ["Run"],
+ ["Legs"],
+ ["Rest"],
+ ["Run","Core"],
+ ["Run"],
+ ["Rest"]
+];
+
+/* ===== STATE ===== */
+let done = JSON.parse(localStorage.getItem("done")||"{}");
+let streak = parseInt(localStorage.getItem("streak")||"0");
+let lastDay = localStorage.getItem("lastDay")||"";
+
+/* ===== STREAK SYSTEM ===== */
+function updateStreak(){
+ const today = new Date().toDateString();
+
+ if(Object.values(done).some(v=>v)){
+   if(lastDay !== today){
+     streak++;
+     localStorage.setItem("streak",streak);
+     localStorage.setItem("lastDay",today);
+   }
+ }
+ document.getElementById("streak").innerText = "🔥 Streak: "+streak+" days";
+}
+
+/* ===== RENDER ===== */
+function render(){
+ const app=document.getElementById("app");
+ app.innerHTML = days.map((d,i)=>`
+   <div class="card">
+     <b>Day ${i+1}</b><br>
+     ${d.map((s,si)=>{
+       const key=i+"-"+si;
+       return `<div class="${done[key]?"done":""}">
+         ${s}
+         <button class="btn" onclick="toggle(${i},${si})">
+           ${done[key]?"✓":"Done"}
+         </button>
+       </div>`;
+     }).join("")}
+   </div>
+ `).join("");
+
+ updateStreak();
+}
+
+/* ===== ACTION ===== */
+function toggle(i,si){
+ const key=i+"-"+si;
+ done[key]=!done[key];
+ localStorage.setItem("done",JSON.stringify(done));
+ render();
+}
+
+/* ===== PWA INSTALL HINT ===== */
+if(window.matchMedia('(display-mode: standalone)').matches){
+ console.log("Running as app");
+}
+
+/* ===== INIT ===== */
+render();
+
+</script>
+
+</body>
+</html>
