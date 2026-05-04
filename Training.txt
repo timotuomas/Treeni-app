@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<!-- PWA manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Theme -->
+<meta name="theme-color" content="#07070f">
+<meta name="background-color" content="#07070f">
+
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Training">
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+
+<!-- Fallback icon for browsers -->
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+<title>My Training</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: #07070f; color: #ddd8ce; font-family: Georgia, serif; min-height: 100vh; padding-bottom: calc(env(safe-area-inset-bottom,0px) + 64px); }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0e0e1c; border-top: 1px solid #1a1a2e; display: flex; padding-bottom: env(safe-area-inset-bottom,0px); z-index: 100; }
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 0 8px; gap: 4px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-family: monospace; color: #3a3a5a; transition: color 0.2s; }
+.nav-btn.active { color: #a78bfa; }
+.nav-icon { font-size: 20px; line-height: 1; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+.header { background: linear-gradient(180deg,#0e0e20 0%,#07070f 100%); border-bottom: 1px solid #14142a; padding: calc(env(safe-area-inset-top,0px) + 32px) 20px 24px; text-align: center; position: relative; overflow: hidden; }
+.dot-grid { position: absolute; inset: 0; opacity: 0.025; background-image: radial-gradient(circle,#fff 1px,transparent 1px); background-size: 28px 28px; pointer-events: none; }
+.header-label { font-size: 10px; letter-spacing: 0.3em; color: #3a3a6a; text-transform: uppercase; font-family: monospace; margin-bottom: 12px; }
+h1 { font-size: clamp(22px,6vw,38px); font-weight: 400; font-style: italic; color: #ddd8ce; margin-bottom: 4px; }
+.header-sub { font-size: 13px; color: #444; margin-bottom: 20px; }
+.stats-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.stat-box { background: #0e0e20; border: 1px solid #1a1a2e; border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 70px; }
+.stat-val { font-size: 16px; font-weight: 700; color: #a78bfa; font-family: monospace; }
+.stat-lbl { font-size: 10px; color: #444; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+.content { max-width: 520px; margin: 0 auto; padding: 0 14px; }
+.phase-tabs { display: flex; gap: 8px; margin: 22px 0 8px; }
+.phase-tab { flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid #1a1a2e; background: #0e0e1a; color: #3a3a5a; font-size: 12px; font-family: monospace; transition: all 0.2s; }
+.phase-tab.active { border-color: #a78bfa; background: #a78bfa12; color: #a78bfa; }
+.tab-label { font-weight: 700; }
+.tab-weeks { opacity: 0.7; font-size: 11px; margin-top: 2px; }
+.phase-desc { font-size: 12px; color: #555; font-style: italic; text-align: center; margin-bottom: 20px; line-height: 1.5; padding: 0 8px; }
+.legend { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; font-family: monospace; border-radius: 6px; padding: 3px 8px; border-width: 1px; border-style: solid; }
+.days { display: flex; flex-direction: column; gap: 10px; }
+.day-card { border-radius: 14px; overflow: hidden; transition: all 0.2s; border: 1px solid #1a1a2e; background: #0f0f1a; }
+.day-card.rest-day { background: #0a0a0f; }
+.day-card.all-done { background: #0a160a; border-color: #1e4a1e; }
+.day-card.today { box-shadow: 0 0 0 1px #3a3a6a; border-color: #3a3a6a; }
+.day-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.day-label-wrap { min-width: 38px; text-align: center; }
+.day-name { font-size: 11px; color: #444; font-family: monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+.day-name.today-name { color: #a78bfa; font-weight: 700; }
+.today-dot { width: 5px; height: 5px; border-radius: 50%; background: #a78bfa; margin: 3px auto 0; }
+.session-pills { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { display: flex; align-items: center; gap: 5px; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-family: monospace; border-width: 1px; border-style: solid; }
+.pill.done { background: #4ade8015 !important; border-color: #4ade8040 !important; color: #4ade80 !important; }
+.day-total { font-size: 11px; color: #333; font-family: monospace; white-space: nowrap; }
+.expand-icon { color: #252540; font-size: 10px; font-family: monospace; }
+.day-body { border-top: 1px solid #1a1a2e; }
+.session-block { padding: 12px 16px; border-bottom: 1px solid #131320; }
+.session-block:last-child { border-bottom: none; }
+.session-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.session-title { display: flex; align-items: center; gap: 8px; }
+.session-name { font-size: 13px; font-weight: 600; }
+.session-dur { font-size: 11px; color: #444; font-family: monospace; }
+.mark-btn { border-radius: 8px; padding: 4px 12px; font-size: 11px; font-family: monospace; border-width: 1px; border-style: solid; border-color: #2a2a4a; color: #444; background: none; transition: all 0.15s; }
+.mark-btn.done { border-color: #4ade80; color: #4ade80; background: #4ade8015; }
+.details { display: flex; flex-direction: column; gap: 4px; }
+.detail-line { font-size: 12px; color: #666; font-family: monospace; padding-left: 8px; line-height: 1.5; border-left-width: 2px; border-left-style: solid; }
+.run-box { margin-top: 24px; background: #0e0e1a; border: 1px solid #f472b630; border-left: 3px solid #f472b6; border-radius: 12px; padding: 14px 16px; }
+.run-box-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.run-notes { display: flex; flex-direction: column; gap: 6px; }
+.run-note { font-size: 12px; color: #777; line-height: 1.6; font-family: monospace; padding-left: 8px; border-left: 2px solid #f472b620; }
+.load-box { margin-top: 14px; background: #0e0e1a; border: 1px solid #1a1a2e; border-radius: 12px; padding: 14px 16px; }
+.load-title { font-size: 11px; color: #3a3a6a; letter-spacing: 0.15em; text-transform: uppercase; font-family: monospace; margin-bottom: 12px; }
+.load-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #0f0f1a; }
+.load-row:last-child { border-bottom: none; }
+.load-lbl { font-size: 12px; color: #555; font-family: monospace; }
+.load-dots { display: flex; gap: 4px; }
+.load-dot { width: 14px; height: 14px; border-radius: 4px; }
+.footer-note { margin-top: 14px; padding: 12px 16px; background: #070710; border: 1px solid #101020; border-radius: 10px; font-size: 11px; color: #2e2e4a; line-height: 1.7; text-align: center; font-family: monospace; margin-bottom: 30px; }
+
+/* Library */
+.lib-header { background: linear-gradient(180deg,#0e0e20 0%,#07070f 100%); border-bottom: 1px solid #14142a; padding: calc(env(safe-area-inset-top,0px) + 28px) 20px 20px; text-align: center; position: relative; overflow: hidden; }
+.lib-title { font-size: clamp(20px,5vw,32px); font-weight: 400; font-style: italic; color: #ddd8ce; margin-bottom: 4px; }
+.lib-sub { font-size: 12px; color: #444; font-family: monospace; }
+.lib-content { max-width: 520px; margin: 0 auto; padding: 0 14px; }
+.cat-filters { display: flex; gap: 8px; margin: 18px 0 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.cat-filters::-webkit-scrollbar { display: none; }
+.cat-pill { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1px solid #1a1a2e; background: #0e0e1a; font-size: 11px; font-family: monospace; color: #3a3a5a; transition: all 0.2s; white-space: nowrap; }
+.cat-pill.active { border-color: var(--c); background: color-mix(in srgb,var(--c) 10%,transparent); color: var(--c); }
+.ex-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+.ex-card { border-radius: 14px; overflow: hidden; border: 1px solid #1a1a2e; background: #0f0f1a; }
+.ex-card-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
+.ex-icon-wrap { width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; border-width: 1px; border-style: solid; }
+.ex-card-info { flex: 1; min-width: 0; }
+.ex-card-name { font-size: 14px; font-weight: 600; font-style: italic; }
+.ex-card-meta { font-size: 11px; color: #555; font-family: monospace; margin-top: 3px; }
+.ex-chevron { font-size: 10px; color: #252540; font-family: monospace; flex-shrink: 0; }
+.ex-card-body { border-top: 1px solid #1a1a2e; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.ex-section-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; font-family: monospace; margin-bottom: 4px; }
+.ex-text { font-size: 13px; color: #888; line-height: 1.65; font-style: italic; }
+.ex-how-box { background: #090910; border-radius: 10px; padding: 12px 14px; border-width: 1px; border-style: solid; }
+.ex-how-text { font-size: 12px; color: #999; line-height: 1.75; font-family: monospace; }
+.ex-sets-badge { display: inline-flex; align-items: center; gap: 6px; background: #13131f; border: 1px solid #1e1e30; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-family: monospace; color: #666; }
+</style>
+</head>
+<body>
+
+<div id="pagePlan" class="page active">
+  <div class="header">
+    <div class="dot-grid"></div>
+    <div class="header-label">Complete Training Program</div>
+    <h1>Your Weekly Plan</h1>
+    <p class="header-sub">Chest · Core · Legs &amp; Glutes · Running</p>
+    <div class="stats-row" id="statsRow"></div>
+  </div>
+  <div class="content">
+    <div class="phase-tabs" id="phaseTabs"></div>
+    <div class="phase-desc" id="phaseDesc"></div>
+    <div class="legend" id="legend"></div>
+    <div class="days" id="daysContainer"></div>
+    <div class="run-box">
+      <div class="run-box-title"><span style="font-size:18px">🏃</span><span style="font-size:13px;font-weight:600;color:#f472b6">Running notes</span></div>
+      <div class="run-notes">
+        <div class="run-note">4 km at ~25 min = 6:15/km — brisk but sustainable. Short sentences should still be possible.</div>
+        <div class="run-note">Never run the day after a hard legs session — knees and hips need 24h.</div>
+        <div class="run-note">Runs sit after strength or on separate days to protect form.</div>
+        <div class="run-note">As fitness builds, aim for 24:30 then 23:30. Don't force it early.</div>
+      </div>
+    </div>
+    <div class="load-box">
+      <div class="load-title">Weekly load breakdown</div>
+      <div id="loadRows"></div>
+    </div>
+    <div class="footer-note">Tap any day to expand and mark sessions done. Today is highlighted.</div>
+  </div>
+</div>
+
+<div id="pageExercises" class="page">
+  <div class="lib-header">
+    <div class="dot-grid"></div>
+    <div class="lib-title">Exercise Library</div>
+    <div class="lib-sub">All moves · tap to expand · why &amp; how</div>
+  </div>
+  <div class="lib-content">
+    <div class="cat-filters" id="catFilters"></div>
+    <div class="ex-list" id="exList"></div>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="navPlan" onclick="showPage('plan')">
+    <span class="nav-icon">📅</span><span>Plan</span>
+  </button>
+  <button class="nav-btn" id="navExercises" onclick="showPage('exercises')">
+    <span class="nav-icon">📖</span><span>Exercises</span>
+  </button>
+</nav>
+
+<script>
+const TYPE_STYLES = {
+  chest:{ color:"#60a5fa", bg:"#60a5fa12", label:"CHEST",         icon:"💪" },
+  abs:  { color:"#4ade80", bg:"#4ade8012", label:"ABS",           icon:"🎯" },
+  legs: { color:"#f59e0b", bg:"#f59e0b12", label:"LEGS & GLUTES", icon:"🦵" },
+  run:  { color:"#f472b6", bg:"#f472b612", label:"RUN",           icon:"🏃" },
+  rest: { color:"#334155", bg:"#33415510", label:"REST",          icon:"😴" },
+};
+
+const phases = [
+  { label:"Phase 1", weeks:"Wk 1–2", description:"Foundation — activating muscles, learning movement patterns", days:[
+    { day:"Mon", sessions:[
+      { type:"chest", name:"Chest Foundation", duration:15, details:["Wall Push-Up 3×15","Incline Push-Up 3×12","Chest Squeeze 3×5×10s","Chest Opener 2×60s"] },
+      { type:"abs",   name:"Core Foundation",  duration:15, details:["Dead Bug 3×8/side","Plank 3×20–30s","Glute Bridge 3×12","Bird Dog 3×8/side","Knee Raises 3×12"] }]},
+    { day:"Tue", sessions:[{ type:"run", name:"Easy Run", duration:25, details:["4 km · ~25 min","Pace: conversational","Focus on breathing rhythm","Walk 5 min after"] }]},
+    { day:"Wed", sessions:[{ type:"legs", name:"Legs & Glutes Foundation", duration:15, details:["Glute Bridge 3×15","Clamshell 3×15/side","Bodyweight Squat 3×12","Hip Hinge 3×12"] }]},
+    { day:"Thu", sessions:[{ type:"rest", name:"Active Rest", duration:null, details:["Light walk 20–30 min","Hip flexor stretch 2 min","Mobility work optional"] }]},
+    { day:"Fri", sessions:[
+      { type:"run", name:"Easy Run", duration:25, details:["4 km · ~25 min","Conversational pace","Aim to feel strong at the end"] },
+      { type:"abs", name:"Core Foundation", duration:15, details:["Dead Bug 3×8/side","Plank 3×20–30s","Bird Dog 3×8/side","Knee Raises 3×12"] }]},
+    { day:"Sat", sessions:[{ type:"run", name:"Easy Run", duration:25, details:["4 km · ~25 min","3rd run of the week","Keep it relaxed"] }]},
+    { day:"Sun", sessions:[{ type:"rest", name:"Full Rest", duration:null, details:["Complete rest","Stretch if you feel like it","Prepare for next week"] }]},
+  ]},
+  { label:"Phase 2", weeks:"Wk 3–5", description:"Build — increasing volume and intensity across all three disciplines", days:[
+    { day:"Mon", sessions:[
+      { type:"chest", name:"Chest Build", duration:18, details:["Standard Push-Up 4×10–12","Wide-Grip Push-Up 3×10","Diamond Push-Up 3×8","Decline Push-Up 3×10","Chest Squeeze 2×5×12s"] },
+      { type:"abs",   name:"Core Build",  duration:18, details:["Dead Bug 3×10/side","Plank 3×40–50s","Mountain Climbers 3×30s","Reverse Crunch 3×12","Bicycle Crunch 3×10/side"] }]},
+    { day:"Tue", sessions:[{ type:"run", name:"Run", duration:25, details:["4 km · ~25 min","Try negative split — 2nd half slightly faster"] }]},
+    { day:"Wed", sessions:[{ type:"legs", name:"Legs & Glutes Build", duration:18, details:["Single-Leg Bridge 3×12/side","Bulgarian Split Squat 3×10/side","Sumo Squat 3×15","Reverse Lunge 3×10/side","Wall Sit 3×30–45s"] }]},
+    { day:"Thu", sessions:[{ type:"run", name:"Run", duration:25, details:["4 km · ~25 min","Maintain steady effort","Walk 5 min cool-down"] }]},
+    { day:"Fri", sessions:[
+      { type:"chest", name:"Chest Build", duration:18, details:["Standard Push-Up 4×10–12","Diamond Push-Up 3×8","Decline Push-Up 3×10","Chest Squeeze 2×5×12s"] },
+      { type:"abs",   name:"Core Build",  duration:18, details:["Mountain Climbers 3×30s","Reverse Crunch 3×12","Side Plank 2×20s/side","Bicycle Crunch 3×10/side"] }]},
+    { day:"Sat", sessions:[
+      { type:"run",  name:"Run",                   duration:25, details:["4 km · ~25 min","Week's 3rd run — finish strong"] },
+      { type:"legs", name:"Legs & Glutes (short)", duration:15, details:["Bulgarian Split Squat 3×10/side","Sumo Squat 3×15","Wall Sit 2×30s"] }]},
+    { day:"Sun", sessions:[{ type:"rest", name:"Full Rest", duration:null, details:["Rest and recover","Hip flexor stretch recommended","Hydrate well"] }]},
+  ]},
+  { label:"Phase 3", weeks:"Wk 6+", description:"Shape & intensity — slow tempos, harder variations, full program running", days:[
+    { day:"Mon", sessions:[
+      { type:"chest", name:"Chest Intensity", duration:20, details:["Push-Up Negative 4×6 (4s down)","Decline Push-Up 4×12","Archer Push-Up 3×5/side","Diamond Push-Up 3×10","Chest Dip 3×8–10"] },
+      { type:"abs",   name:"Core Intensity",  duration:20, details:["Plank Shoulder Taps 3×10/side","Hollow Body Hold 3×20–30s","Mountain Climbers 3×45s","Reverse Crunch 3×15","V-Sit Hold 3×15–20s"] }]},
+    { day:"Tue", sessions:[{ type:"legs", name:"Legs & Glutes Shape", duration:20, details:["Bulgarian Split Squat 4×12/side","Hip Thrust 4×15","Squat Jump 3×10","Lateral Lunge 3×10/side","SL Romanian Deadlift 3×8/side","Wall Sit 2×60s"] }]},
+    { day:"Wed", sessions:[{ type:"run", name:"Run", duration:25, details:["4 km · ~25 min","Start pushing pace slightly","Aim for 6:00–6:15/km"] }]},
+    { day:"Thu", sessions:[
+      { type:"chest", name:"Chest Intensity", duration:20, details:["Push-Up Negative 4×6","Decline Push-Up 4×12","Diamond Push-Up 3×10","Chest Dip 3×8–10","Chest Opener 1×90s"] },
+      { type:"abs",   name:"Core Intensity",  duration:15, details:["Hollow Body Hold 3×25s","Mountain Climbers 3×45s","Side Plank + Hip Dip 3×8/side","V-Sit Hold 3×20s"] }]},
+    { day:"Fri", sessions:[{ type:"run", name:"Run", duration:25, details:["4 km · ~25 min","Steady and controlled","Focus on posture and breathing"] }]},
+    { day:"Sat", sessions:[
+      { type:"legs", name:"Legs & Glutes Shape", duration:20, details:["Hip Thrust 4×15","Squat Jump 3×10","Lateral Lunge 3×10/side","Wall Sit 2×60s"] },
+      { type:"run",  name:"Run",                 duration:25, details:["4 km · ~25 min","Week's 3rd run","Walk 10 min after — earned it"] }]},
+    { day:"Sun", sessions:[{ type:"rest", name:"Full Rest", duration:null, details:["Non-negotiable rest","Light stretching only","Sleep well — this is when you grow"] }]},
+  ]},
+];
+
+const exercises = [
+  // ABS
+  { cat:"abs", icon:"🪲", name:"Dead Bug", sets:"3 sets · 8–10 reps per side", phase:"Phase 1–3",
+    why:"Activates the deep core (transverse abdominis) — the muscle that actually pulls your belly in. Foundation of everything.",
+    how:"Lie on back, arms to ceiling, knees bent 90° in the air. Slowly lower opposite arm and leg toward the floor while keeping lower back PRESSED into the floor. Return. Never let the back arch." },
+  { cat:"abs", icon:"🏋️", name:"Plank", sets:"3 sets · 20–50 sec", phase:"Phase 1–3",
+    why:"Full core bracing without spinal stress. The most joint-friendly core exercise — works everything at once.",
+    how:"Forearms on floor, body in a straight line head to heels. Squeeze glutes, brace abs like you're about to take a punch. Don't let hips sag or rise. Breathe steadily throughout." },
+  { cat:"abs", icon:"🐦", name:"Bird Dog", sets:"3 sets · 8 reps per side", phase:"Phase 1",
+    why:"Balance and core stability with very low injury risk. Works deep stabilisers and is great for lower back health.",
+    how:"On hands and knees, back flat. Extend opposite arm and leg simultaneously — reach long, don't rotate hips. Hold 1 second. Return slowly. Alternate sides." },
+  { cat:"abs", icon:"🦵", name:"Lying Knee Raises", sets:"3 sets · 12 reps", phase:"Phase 1",
+    why:"Gentle lower ab engagement. Much safer on the lower back than straight-leg raises.",
+    how:"Lie flat, hands beside hips. Bring both knees toward chest, then lower slowly. Keep the movement controlled — don't let feet crash down." },
+  { cat:"abs", icon:"🧗", name:"Mountain Climbers", sets:"3 sets · 30–45 sec", phase:"Phase 2–3",
+    why:"Cardio + core combo. Burns visceral belly fat while building core stability — double benefit in one exercise.",
+    how:"Push-up position, body rigid. Drive one knee toward chest then switch rapidly. Keep hips LOW — the most common mistake. Faster = more cardio; slower = more core." },
+  { cat:"abs", icon:"🔄", name:"Reverse Crunch", sets:"3 sets · 12–15 reps", phase:"Phase 2–3",
+    why:"Targets lower abs without neck strain — unlike traditional crunches which mainly just stress the neck.",
+    how:"Lie on back, knees bent at 90°, feet off floor. Use abs to curl hips off the floor — small movement. Pause at top. Lower slowly. Never use momentum." },
+  { cat:"abs", icon:"↔️", name:"Side Plank", sets:"2–3 sets · 20 sec per side", phase:"Phase 2–3",
+    why:"Obliques and lateral stability. The sides of your core are often completely neglected — this fixes that directly.",
+    how:"On one forearm, feet stacked or staggered. Body in a straight diagonal line. Don't let hip sag. Breathe. Advanced: add hip dips — lower hip toward floor, raise back up." },
+  { cat:"abs", icon:"🚴", name:"Bicycle Crunch (SLOW)", sets:"3 sets · 10 reps per side", phase:"Phase 2",
+    why:"Works obliques and rectus abdominis together. Most people do this too fast and get nothing — slow is everything here.",
+    how:"Lie on back, hands behind head lightly. Bring opposite elbow toward opposite knee — 3 full seconds per rep. Fully extend the other leg. Never pull your neck." },
+  { cat:"abs", icon:"👋", name:"Plank Shoulder Taps", sets:"3 sets · 10 reps per side", phase:"Phase 3",
+    why:"Anti-rotation challenge — significantly harder than regular plank. Forces core to resist twisting forces under load.",
+    how:"High plank (hands not forearms). Tap one shoulder with opposite hand while keeping hips perfectly still. Widen feet for stability. The challenge is NOT rotating at all." },
+  { cat:"abs", icon:"🤸", name:"Hollow Body Hold", sets:"3 sets · 20–30 sec", phase:"Phase 3",
+    why:"The #1 gymnastic core exercise. Compresses the entire anterior chain and flattens the belly like nothing else.",
+    how:"Lie on back, arms overhead, legs straight. Lift everything slightly off the floor — only lower back touches. Think banana shape. You'll feel the whole core shaking. Breathe shallowly." },
+  { cat:"abs", icon:"✌️", name:"V-Sit Hold", sets:"3 sets · 15–20 sec", phase:"Phase 3",
+    why:"Full core challenge — hip flexors, abs and balance together. The hardest bodyweight ab hold in the program.",
+    how:"Sit on floor, lean back slightly, lift legs to form a V shape. Arms out for balance. Keep chest up. Modify by bending knees if needed. Hold and breathe steadily." },
+  // CHEST
+  { cat:"chest", icon:"🧱", name:"Wall Push-Up", sets:"3 sets · 15 reps", phase:"Phase 1",
+    why:"Perfect starting point — builds chest activation patterns without strain. Don't skip if floor push-ups feel hard.",
+    how:"Stand arm's length from wall. Hands at chest height, shoulder-width. Lower chest toward wall with elbows at 45°. Push back. Keep body in one rigid line — no sagging." },
+  { cat:"chest", icon:"📐", name:"Incline Push-Up", sets:"3 sets · 12 reps", phase:"Phase 1",
+    why:"Hands elevated on a table shifts load to lower chest — great for visible mass. Easier on joints than floor push-ups.",
+    how:"Hands on elevated surface, body in a straight line. Lower chest to surface level. Elbows track at 45° from body — never flared wide. Push up with control." },
+  { cat:"chest", icon:"🤝", name:"Chest Squeeze (Isometric)", sets:"3 sets · 5–12 sec holds", phase:"Phase 1–3",
+    why:"Builds the mind-muscle connection critical for chest growth. Also hits the inner chest that push-ups miss.",
+    how:"Press palms together at chest height with maximum effort. Hold 10–12 sec. Release completely. Repeat. Hold a book between palms to intensify." },
+  { cat:"chest", icon:"🦅", name:"Chest Opener Stretch", sets:"1–2 sets · 60–90 sec", phase:"Phase 1–3",
+    why:"Stretches pec fascia after work — improves range of motion and reduces tightness that limits muscle growth.",
+    how:"Lie on floor, arms out like a T. Let gravity open your chest. Breathe deeply and slowly. Don't force — let the stretch deepen with each exhale." },
+  { cat:"chest", icon:"💪", name:"Standard Push-Up", sets:"4 sets · 10–12 reps", phase:"Phase 2–3",
+    why:"The king of bodyweight chest exercises. Works upper, middle and lower chest plus triceps and front shoulders.",
+    how:"Hands just wider than shoulder-width. Body rigid like a moving plank. Lower until chest nearly touches floor. Drive up. Breathe out on the push. Elbows at 45°, never flared." },
+  { cat:"chest", icon:"↔️", name:"Wide-Grip Push-Up", sets:"3 sets · 10 reps", phase:"Phase 2",
+    why:"Hands wider than standard shifts emphasis to outer chest — key for that broader, fuller look from the front.",
+    how:"Move hands 6–8 inches wider than standard. Elbows track wider. Same strict body line. Lower slowly and push up with control. Don't let hips sag." },
+  { cat:"chest", icon:"💎", name:"Diamond Push-Up", sets:"3 sets · 8–10 reps", phase:"Phase 2–3",
+    why:"Inner chest and triceps. The inner chest is usually underdeveloped in men — this targets it directly.",
+    how:"Hands close under sternum, thumbs and index fingers forming a diamond. Lower slowly. This is harder than it looks — reduce range of motion at first if needed." },
+  { cat:"chest", icon:"📉", name:"Decline Push-Up", sets:"3–4 sets · 10–12 reps", phase:"Phase 2–3",
+    why:"Feet elevated targets upper chest — the part that gives the most visible fullness and shape from the front.",
+    how:"Feet on chair (30–45cm high), hands on floor. Keep core tight. Lower chest toward floor. Push back up with control. Higher feet = more upper chest." },
+  { cat:"chest", icon:"⬇️", name:"Push-Up Negative", sets:"4 sets · 6 reps (4 sec down)", phase:"Phase 3",
+    why:"The slow eccentric phase causes the most muscle damage — and therefore the most growth. Very effective for mass.",
+    how:"Take 4 full seconds to lower to the floor. Pause 1 sec at the bottom. Explode back up. Rest 60 sec between sets. Quality over quantity entirely." },
+  { cat:"chest", icon:"🏹", name:"Archer Push-Up", sets:"3 sets · 5 reps per side", phase:"Phase 3",
+    why:"Near single-arm push-up loading. Massive chest and stabiliser recruitment. The hardest push-up variation in the program.",
+    how:"Wide hand stance. Shift weight to one side as you lower, other arm stays extended straight. Alternate sides. Reduce range of motion if needed." },
+  { cat:"chest", icon:"🪑", name:"Chest Dip (between chairs)", sets:"3 sets · 8–10 reps", phase:"Phase 3",
+    why:"Most effective bodyweight chest exercise for mass when done with a forward lean. Works entire chest through full range.",
+    how:"Hands on back of two STURDY chairs against a wall. Lean forward — this is a chest dip not a tricep dip. Lower until upper arms are parallel to floor. Drive up. Test stability first." },
+  // LEGS
+  { cat:"legs", icon:"🌉", name:"Glute Bridge", sets:"3 sets · 15 reps", phase:"Phase 1–2",
+    why:"The foundational glute activation exercise. Teaches your brain to fire glutes instead of defaulting to lower back.",
+    how:"Lie on back, knees bent, feet flat. Drive hips up by squeezing glutes hard at top. Hold 1 sec. Lower slowly. Don't arch lower back — squeeze your way up." },
+  { cat:"legs", icon:"🐚", name:"Clamshell", sets:"3 sets · 15 reps per side", phase:"Phase 1",
+    why:"Activates gluteus medius — the side glute that gives shape and prevents knee pain. Almost always weak in men.",
+    how:"Lie on side, knees bent 90°, feet stacked. Keep feet together, rotate top knee up like a clamshell opening. Don't let hips roll back. Slow and deliberate." },
+  { cat:"legs", icon:"🦵", name:"Bodyweight Squat", sets:"3 sets · 12 reps", phase:"Phase 1",
+    why:"Foundational leg exercise hitting quads, hamstrings and glutes. Form before volume — always.",
+    how:"Feet shoulder-width, toes slightly out. Sit back and down like there's a chair behind you. Knees track over toes. Chest up. Drive through heels to stand." },
+  { cat:"legs", icon:"🔄", name:"Hip Hinge", sets:"3 sets · 12 reps", phase:"Phase 1",
+    why:"Teaches the posterior chain to work together. The movement pattern behind all powerful lower-body exercise.",
+    how:"Stand feet hip-width. Soften knees. Push hips BACK (not down) keeping back flat. Feel hamstrings stretch. Drive hips forward to stand. Like closing a car door with your hips." },
+  { cat:"legs", icon:"🦶", name:"Single-Leg Glute Bridge", sets:"3 sets · 12 reps per side", phase:"Phase 2",
+    why:"Double the load on each glute vs standard bridge. Reveals and corrects side-to-side imbalances. Harder than it looks.",
+    how:"Same as glute bridge but one leg extended straight. Drive through grounded heel. Hips stay level — don't let the off-side drop. Switch sides without resting." },
+  { cat:"legs", icon:"🪑", name:"Bulgarian Split Squat", sets:"3–4 sets · 10–12 reps per side", phase:"Phase 2–3",
+    why:"The most effective bodyweight leg exercise for mass. Single-leg loading hits quads and glutes intensely. Expect soreness.",
+    how:"Back foot elevated on chair or sofa. Front foot forward so shin stays vertical. Lower back knee toward floor. Keep torso upright. Drive through front heel to rise." },
+  { cat:"legs", icon:"🏋️", name:"Sumo Squat", sets:"3 sets · 15 reps", phase:"Phase 2",
+    why:"Wide stance targets inner thighs and glutes differently to a regular squat. Creates a fuller, rounder glute shape.",
+    how:"Feet wider than shoulders, toes out 45°. Squat deep between knees. Push knees outward tracking over toes. Squeeze glutes HARD at the top of every rep." },
+  { cat:"legs", icon:"⬅️", name:"Reverse Lunge", sets:"3 sets · 10 reps per side", phase:"Phase 2",
+    why:"Safer on knees than forward lunge. Heavy glute and quad involvement. Stepping back emphasises glutes more.",
+    how:"Step one foot back, lower back knee toward floor. Front shin stays vertical — crucial. Drive through front heel to return. Alternate legs or complete one side then switch." },
+  { cat:"legs", icon:"🧱", name:"Wall Sit", sets:"2–3 sets · 30–60 sec", phase:"Phase 2–3",
+    why:"Isometric quad and glute endurance. Builds slow-twitch fibres that give legs their firm, toned appearance.",
+    how:"Back flat against wall, slide down until thighs parallel to floor. Feet flat, directly under knees. Hold. Breathe. Advanced: lift one heel and alternate every 10 seconds." },
+  { cat:"legs", icon:"🚀", name:"Hip Thrust (floor)", sets:"4 sets · 15 reps", phase:"Phase 3",
+    why:"The single best glute exercise. Maximum glute contraction at the top. More effective than squats for direct glute development.",
+    how:"Upper back on sofa edge (push sofa against wall). Feet flat, hip-width. Drive hips up until body forms a straight line shoulders to knees. Squeeze HARD at top for 1 sec. Lower with control." },
+  { cat:"legs", icon:"💥", name:"Squat Jump", sets:"3 sets · 10 reps", phase:"Phase 3",
+    why:"Explosive training activates fast-twitch fibres that slow reps miss. Builds athletic, powerful legs not just endurance.",
+    how:"Squat to parallel, then explode up into a jump. Land SOFTLY with bent knees — absorb the impact. Reset fully before next rep. Skip if you have knee issues." },
+  { cat:"legs", icon:"↔️", name:"Lateral Lunge", sets:"3 sets · 10 reps per side", phase:"Phase 3",
+    why:"Side-to-side movement hits inner and outer thigh plus glute med — creates leg definition from the front.",
+    how:"Step wide to one side, bend that knee and sit into it while other leg stays straight. Keep chest up. Push through bent-leg heel to return. Go as deep as balance allows." },
+  { cat:"legs", icon:"🏗️", name:"Single-Leg Romanian Deadlift", sets:"3 sets · 8 reps per side", phase:"Phase 3",
+    why:"Hamstring and glute under load. Builds the back of the leg — often the most neglected area in home training.",
+    how:"Stand on one leg, soften that knee. Hinge forward, letting other leg float behind for balance. Keep back flat, feel the hamstring stretch. Drive hip forward to return. Use wall for balance." },
+];
+
+const CATS = [
+  { id:"all",   label:"All",           color:"#a78bfa" },
+  { id:"abs",   label:"Abs & Core",    color:"#4ade80" },
+  { id:"chest", label:"Chest",         color:"#60a5fa" },
+  { id:"legs",  label:"Legs & Glutes", color:"#f59e0b" },
+];
+
+// Plan state
+let currentPhase = 0;
+const expanded = {};
+const done = {};
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const todayShort = DAYS[(new Date().getDay()+6)%7];
+
+// Library state
+let activeCat = "all";
+const exState = {};
+
+function catColor(cat) { return {abs:"#4ade80",chest:"#60a5fa",legs:"#f59e0b"}[cat]||"#a78bfa"; }
+
+/* ── PLAN ── */
+function renderPlan() {
+  const p = phases[currentPhase];
+  document.getElementById("statsRow").innerHTML = [
+    {label:"Active days",value:"6"},
+    {label:"Min / week",value:phases[currentPhase].days.reduce((a,d)=>a+d.sessions.reduce((b,s)=>b+(s.duration||0),0),0)},
+    {label:"Runs",value:p.days.flatMap(d=>d.sessions.filter(s=>s.type==="run")).length+"×4km"},
+    {label:"Sessions",value:p.days.flatMap(d=>d.sessions.filter(s=>s.type!=="rest")).length},
+  ].map(s=>`<div class="stat-box"><div class="stat-val">${s.value}</div><div class="stat-lbl">${s.label}</div></div>`).join("");
+
+  document.getElementById("phaseTabs").innerHTML = phases.map((ph,i)=>
+    `<button class="phase-tab ${i===currentPhase?"active":""}" onclick="setPhase(${i})">
+      <div class="tab-label">${ph.label}</div><div class="tab-weeks">${ph.weeks}</div>
+    </button>`).join("");
+
+  document.getElementById("phaseDesc").textContent = p.description;
+
+  document.getElementById("legend").innerHTML = Object.entries(TYPE_STYLES).map(([k,ts])=>
+    `<div class="legend-item" style="color:${ts.color};background:${ts.bg};border-color:${ts.color}25">
+      <span>${ts.icon}</span><span>${ts.label}</span>
+    </div>`).join("");
+
+  document.getElementById("daysContainer").innerHTML = p.days.map((d,di)=>renderDay(d,di)).join("");
+
+  document.getElementById("loadRows").innerHTML = [
+    {label:"Chest sessions",type:"chest",color:"#60a5fa"},
+    {label:"Core sessions",type:"abs",color:"#4ade80"},
+    {label:"Legs sessions",type:"legs",color:"#f59e0b"},
+    {label:"Runs (4 km ea)",type:"run",color:"#f472b6"},
+    {label:"Rest days",type:"_rest",color:"#334155"},
+  ].map((row,i)=>{
+    const count = row.type==="_rest"
+      ? p.days.filter(d=>d.sessions.every(s=>s.type==="rest")).length
+      : p.days.flatMap(d=>d.sessions.filter(s=>s.type===row.type)).length;
+    const dots = count>0
+      ? Array.from({length:count},()=>`<div class="load-dot" style="background:${row.color}30;border:1px solid ${row.color}60"></div>`).join("")
+      : `<span style="color:#2a2a3a;font-size:12px">—</span>`;
+    return `<div class="load-row" ${i===4?'style="border-bottom:none"':""}>
+      <span class="load-lbl">${row.label}</span><div class="load-dots">${dots}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderDay(d,di) {
+  const isRest = d.sessions.every(s=>s.type==="rest");
+  const isToday = d.day===todayShort;
+  const isExp = expanded[di];
+  const totalM = d.sessions.reduce((a,s)=>a+(s.duration||0),0);
+  const allDone = d.sessions.length>0 && d.sessions.every((_,si)=>done[`${currentPhase}-${di}-${si}`]);
+  const pills = d.sessions.map((s,si)=>{
+    const ts=TYPE_STYLES[s.type]||TYPE_STYLES.rest;
+    const isDone=done[`${currentPhase}-${di}-${si}`];
+    const t=s.type==="run"?`Run ${s.duration}min`:s.name.split(" ")[0]+(s.duration?` ${s.duration}m`:"");
+    return `<div class="pill ${isDone?"done":""}" style="${isDone?"":"color:"+ts.color+";background:"+ts.bg+";border-color:"+ts.color+"30"}">
+      <span>${isDone?"✓":ts.icon}</span><span>${t}</span></div>`;
+  }).join("");
+  const body = isExp ? `<div class="day-body">${d.sessions.map((s,si)=>{
+    const ts=TYPE_STYLES[s.type]||TYPE_STYLES.rest;
+    const isDone=done[`${currentPhase}-${di}-${si}`];
+    return `<div class="session-block">
+      <div class="session-top">
+        <div class="session-title">
+          <span style="font-size:16px">${ts.icon}</span>
+          <span class="session-name" style="color:${ts.color}">${s.name}</span>
+          ${s.duration?`<span class="session-dur">${s.duration} min</span>`:""}
+        </div>
+        <button class="mark-btn ${isDone?"done":""}" onclick="toggleDone(${di},${si},event)">${isDone?"✓ done":"mark done"}</button>
+      </div>
+      <div class="details">${s.details.map(det=>`<div class="detail-line" style="border-left-color:${ts.color}25">${det}</div>`).join("")}</div>
+    </div>`;
+  }).join("")}</div>` : "";
+  return `<div class="day-card ${isRest?"rest-day":""} ${allDone?"all-done":""} ${isToday?"today":""}">
+    <div class="day-header" onclick="toggleExpand(${di})">
+      <div class="day-label-wrap">
+        <div class="day-name ${isToday?"today-name":""}">${d.day}</div>
+        ${isToday?"<div class='today-dot'></div>":""}
+      </div>
+      <div class="session-pills">${pills}</div>
+      ${totalM>0?`<div class="day-total">${totalM}min</div>`:""}
+      ${!isRest?`<div class="expand-icon">${isExp?"▲":"▼"}</div>`:""}
+    </div>${body}</div>`;
+}
+
+function setPhase(i){currentPhase=i;renderPlan();}
+function toggleExpand(di){expanded[di]=!expanded[di];renderPlan();}
+function toggleDone(di,si,e){e.stopPropagation();const k=`${currentPhase}-${di}-${si}`;done[k]=!done[k];renderPlan();}
+
+/* ── LIBRARY ── */
+function renderLibrary() {
+  document.getElementById("catFilters").innerHTML = CATS.map(c=>
+    `<button class="cat-pill ${activeCat===c.id?"active":""}" style="--c:${c.color}" onclick="setCat('${c.id}')">${c.label}</button>`
+  ).join("");
+  const filtered = activeCat==="all" ? exercises : exercises.filter(e=>e.cat===activeCat);
+  document.getElementById("exList").innerHTML = filtered.map(ex=>{
+    const color=catColor(ex.cat);
+    const isOpen=exState[ex.name];
+    const catLabel={abs:"Abs & Core",chest:"Chest",legs:"Legs & Glutes"}[ex.cat]||ex.cat;
+    const safe=ex.name.replace(/'/g,"\\'");
+    return `<div class="ex-card">
+      <div class="ex-card-header" onclick="toggleEx('${safe}')">
+        <div class="ex-icon-wrap" style="background:${color}10;border-color:${color}25"><span>${ex.icon}</span></div>
+        <div class="ex-card-info">
+          <div class="ex-card-name" style="color:${color}">${ex.name}</div>
+          <div class="ex-card-meta">${catLabel} · ${ex.phase}</div>
+        </div>
+        <div class="ex-chevron">${isOpen?"▲":"▼"}</div>
+      </div>
+      ${isOpen?`<div class="ex-card-body">
+        <div class="ex-sets-badge" style="border-color:${color}20"><span style="color:${color}">📊</span><span>${ex.sets}</span></div>
+        <div>
+          <div class="ex-section-label" style="color:${color}">Why this exercise</div>
+          <div class="ex-text">${ex.why}</div>
+        </div>
+        <div>
+          <div class="ex-section-label" style="color:${color}">How to do it</div>
+          <div class="ex-how-box" style="border-color:${color}15"><div class="ex-how-text">${ex.how}</div></div>
+        </div>
+      </div>`:""}
+    </div>`;
+  }).join("");
+}
+
+function setCat(cat){activeCat=cat;Object.keys(exState).forEach(k=>delete exState[k]);renderLibrary();}
+function toggleEx(name){exState[name]=!exState[name];renderLibrary();}
+
+/* ── NAV ── */
+function showPage(page){
+  document.getElementById("pagePlan").classList.toggle("active",page==="plan");
+  document.getElementById("pageExercises").classList.toggle("active",page==="exercises");
+  document.getElementById("navPlan").classList.toggle("active",page==="plan");
+  document.getElementById("navExercises").classList.toggle("active",page==="exercises");
+  if(page==="exercises") renderLibrary();
+}
+
+renderPlan();
+</script>
+</body>
+</html>
